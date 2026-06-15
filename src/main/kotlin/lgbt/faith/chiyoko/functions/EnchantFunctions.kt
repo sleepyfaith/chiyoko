@@ -5,6 +5,7 @@ import net.minecraft.client.Minecraft
 import net.minecraft.core.Holder
 import net.minecraft.core.component.DataComponents
 import net.minecraft.core.registries.Registries
+import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
 import net.minecraft.tags.EnchantmentTags
 import net.minecraft.util.Mth

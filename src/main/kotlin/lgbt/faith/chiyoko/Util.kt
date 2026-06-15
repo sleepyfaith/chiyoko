@@ -1,12 +1,15 @@
 package lgbt.faith.chiyoko
 
+import com.mojang.brigadier.context.CommandContext
 import com.mojang.serialization.Codec
 import lgbt.faith.chiyoko.mixin.BiomeManagerAccessor
 import lgbt.faith.chiyoko.sequences.Vault
+import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
 import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.core.component.DataComponentType
 import net.minecraft.network.chat.Component
+import net.minecraft.network.chat.ComponentUtils
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.biome.BiomeManager
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -38,6 +41,30 @@ fun isMatchingSeed(): Boolean {
     val worldHash = (level.biomeManager as BiomeManagerAccessor).biomeZoomSeed
 
     return worldSeed == Chiyoko.seed || worldHash == BiomeManager.obfuscateSeed(Chiyoko.seed)
+}
+
+fun validateSeed(context: CommandContext<FabricClientCommandSource?>?): Int {
+    if (context == null) return 0
+
+    val source = context.source ?: return 0
+
+    val seedText = ComponentUtils.copyOnClickText(Chiyoko.seed.toString())
+
+    if (isMatchingSeed()) {
+        source.sendFeedback(
+            Component.literal("§a✔§f ")
+                .append(seedText)
+                .append(" is the correct world seed")
+        )
+        return 1
+    } else {
+        source.sendFeedback(
+            Component.literal("§c✘§f ")
+                .append(seedText)
+                .append(" is not the correct world seed")
+        )
+        return 0
+    }
 }
 
 fun handleVaultDesync(actual: ItemStack, isOminous: Boolean) {

@@ -8,13 +8,18 @@ import lgbt.faith.chiyoko.sequences.PiglinBartering
 import lgbt.faith.chiyoko.sequences.Vault
 import lgbt.faith.chiyoko.sequences.WitherSkeleton
 import net.fabricmc.api.ClientModInitializer
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.components.toasts.SystemToast
+import net.minecraft.network.chat.Component
 import net.minecraft.world.level.storage.LevelResource
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.iterator
 import kotlin.io.path.name
+
 
 
 
@@ -52,7 +57,6 @@ class Chiyoko : ClientModInitializer {
 
         val sequences = Sequences()
 
-
         fun changeWorldSeed() {
             val worldData = configManager.config.worlds[worldName] ?: return
 
@@ -66,7 +70,7 @@ class Chiyoko : ClientModInitializer {
 
                 sequence.loadState(rng.seedLo, rng.seedHi)
 
-                configManager.updateSequence(worldName, seed, rng, key)
+                configManager.updateSequence(worldName, seed, rng, key, 0)
             }
         }
     }
@@ -78,7 +82,26 @@ class Chiyoko : ClientModInitializer {
         configManager = ChiyokoConfigManager()
         configManager.load()
 
-        ClientTickEvents.END_CLIENT_TICK.register {
+        ClientCommandRegistrationCallback.EVENT.register { dispatcher, registryAccess  ->
+            dispatcher.register(
+                ClientCommands.literal("validateseed")
+                    .executes { context ->
+                        validateSeed(context)
+                    }
+            )
+        }
+
+        ClientTickEvents.END_CLIENT_TICK.register { client ->
+
+            if (configManager.wasReset) {
+                SystemToast.add(
+                    client.toastManager,
+                    SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
+                    Component.literal("chiyoko config reset"),
+                    Component.literal("bug that affects advancements was found, world config purged.")
+                )
+                configManager.wasReset = false
+            }
 
             val player = mc.player
             if (player == null) {
@@ -87,6 +110,7 @@ class Chiyoko : ClientModInitializer {
             }
             if (loaded) return@register
             loaded = true
+            
             var s = 0L
             var w = ""
             if (mc.currentServer == null) {
