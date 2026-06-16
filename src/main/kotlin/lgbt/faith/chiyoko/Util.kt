@@ -6,31 +6,16 @@ import lgbt.faith.chiyoko.mixin.BiomeManagerAccessor
 import lgbt.faith.chiyoko.sequences.Vault
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
 import net.minecraft.client.Minecraft
-import net.minecraft.core.BlockPos
 import net.minecraft.core.component.DataComponentType
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.ComponentUtils
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.biome.BiomeManager
-import java.util.concurrent.ConcurrentLinkedQueue
 
 object ChiyokoComponents {
     val VARIANT: DataComponentType<Int> = DataComponentType.builder<Int>()
         .persistent(Codec.INT)
         .build()
-}
-
-object DropCapture {
-    val pendingDrops = mutableMapOf<Int, MutableList<ItemStack>>()
-}
-data class PendingVault(
-    val pos: BlockPos,
-    val predictedItems: List<ItemStack>,
-    val vault: Vault,
-    val ticksWaited: Int = 0,
-)
-object VaultInteractionState {
-    val pendingVaults: ConcurrentLinkedQueue<PendingVault> = ConcurrentLinkedQueue()
 }
 
 fun isMatchingSeed(): Boolean {

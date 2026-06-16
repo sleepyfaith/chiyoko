@@ -10,11 +10,11 @@
 
     "PiglinAiMixin",
     "LivingEntityMixin",
-    "EntityMixin",
     "FishingHookMixin",
-    "BlockMixin",
+    "FishingHookAccessor",
     "MultiPlayerGameModeMixin",
-    "MinecraftMixin"
+    "MinecraftMixin",
+    "LevelMixin"
   ],
   "injectors": {
     "defaultRequire": 1

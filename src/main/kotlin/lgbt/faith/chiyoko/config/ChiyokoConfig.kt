@@ -5,7 +5,10 @@ import lgbt.faith.chiyoko.Chiyoko
 import lgbt.faith.chiyoko.rand.Xoroshiro128PlusPlus
 import lgbt.faith.chiyoko.sequences.WitherSkeleton
 import net.fabricmc.loader.api.FabricLoader
-import kotlin.io.path.* // Cleaner Kotlin extension functions for NIO paths
+import kotlin.io.path.createDirectories
+import kotlin.io.path.exists
+import kotlin.io.path.reader
+import kotlin.io.path.writer
 
 enum class OverlayRotation { HORIZONTAL, VERTICAL }
 

@@ -4,11 +4,7 @@ import lgbt.faith.chiyoko.Chiyoko
 import lgbt.faith.chiyoko.config.ChiyokoConfigManager
 import lgbt.faith.chiyoko.config.OverlayConfig
 import lgbt.faith.chiyoko.config.OverlayRotation
-import lgbt.faith.chiyoko.sequences.Fishing
-import lgbt.faith.chiyoko.sequences.Gravel
-import lgbt.faith.chiyoko.sequences.PiglinBartering
-import lgbt.faith.chiyoko.sequences.Vault
-import lgbt.faith.chiyoko.sequences.WitherSkeleton
+import lgbt.faith.chiyoko.sequences.*
 import net.minecraft.ChatFormatting
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Font

@@ -1,8 +1,9 @@
 package lgbt.faith.chiyoko.sequences
 
+import lgbt.faith.chiyoko.functions.EnchantFunctions
+import lgbt.faith.chiyoko.functions.ItemFunctions
 import lgbt.faith.chiyoko.rand.RandomSupport
 import lgbt.faith.chiyoko.rand.Xoroshiro128PlusPlus
-import lgbt.faith.chiyoko.functions.*
 import net.minecraft.core.component.DataComponents
 import net.minecraft.util.Mth
 import net.minecraft.world.item.ItemStack
