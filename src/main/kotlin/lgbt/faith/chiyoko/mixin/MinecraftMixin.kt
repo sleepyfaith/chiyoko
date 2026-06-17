@@ -163,22 +163,31 @@ class MinecraftMixin {
 
     private fun resolveGravel(p: PendingGravelBreak) {
         val gravel = Chiyoko.sequences.map["minecraft:blocks/gravel"] as? Gravel ?: return
-        var predicted = gravel.roll(1, p.fortune)
-        gravel.advance(1)
-        Chiyoko.configManager.updateSequence(Chiyoko.worldName, Chiyoko.seed, gravel.getRngCopy(), gravel.key)
 
         val actual = p.collectedItems.first()
-        var desynced = actual.item != predicted.first().item
-        if (!desynced || !isMatchingSeed()) return
+        // avoid potential misroutes which will cause the game to hang as it infinitely writes to the config file for desyncs.
+        if (actual.item != Items.GRAVEL && actual.item != Items.FLINT) {
+            return
+        }
 
-        var advances = 0
-        while (desynced) {
+        var predicted = gravel.roll(1, p.fortune)
+        gravel.advance(1)
+        var desynced = actual.item != predicted.firstOrNull()?.item
+        if (!desynced || !isMatchingSeed()) {
+            Chiyoko.configManager.updateSequence(Chiyoko.worldName, Chiyoko.seed, gravel.getRngCopy(), gravel.key)
+            return
+        }
+
+        var advances = 0L
+        val maxAdvances = 1000
+        while (desynced && advances < maxAdvances) {
             advances++
             predicted = gravel.roll(1, p.fortune)
             gravel.advance(1)
-            Chiyoko.configManager.updateSequence(Chiyoko.worldName, Chiyoko.seed, gravel.getRngCopy(), gravel.key)
-            desynced = actual.item != predicted.first().item
+            desynced = actual.item != predicted.firstOrNull()?.item
         }
+        Chiyoko.configManager.updateSequence(Chiyoko.worldName, Chiyoko.seed, gravel.getRngCopy(), gravel.key, advances)
+
         sendOverlay("advanced $advances times to account for desync")
     }
 

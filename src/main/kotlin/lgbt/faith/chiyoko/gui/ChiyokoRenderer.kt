@@ -19,10 +19,7 @@ class ChiyokoRenderer {
     data class SubList(val xOffset: Int, val yOffset: Int, val items: List<ItemStack>)
 
     val mc = Minecraft.getInstance()
-    val registries = mc.player?.level()?.registryAccess()!!
-    val enchantLookup = registries.lookupOrThrow(Registries.ENCHANTMENT)
-    val lootingHolder = enchantLookup.getOrThrow(Enchantments.LOOTING)
-    val fortuneHolder = enchantLookup.getOrThrow(Enchantments.FORTUNE)
+
     val SLOT_SPRITE = Identifier.parse("minecraft:container/slot")
     val font = mc.font
 
@@ -33,6 +30,18 @@ class ChiyokoRenderer {
 
     fun render(graphics: GuiGraphicsExtractor) {
         if (!Chiyoko.loaded) return
+        if (mc.gui.hud.isHidden) return
+
+        val mc = Minecraft.getInstance()
+
+        val player = mc.player ?: return  // bail early if player is null
+        val level = mc.level ?: return
+
+        val registries = player.level().registryAccess()
+        val enchantLookup = registries.lookupOrThrow(Registries.ENCHANTMENT)
+        val lootingHolder = enchantLookup.getOrThrow(Enchantments.LOOTING)
+        val fortuneHolder = enchantLookup.getOrThrow(Enchantments.FORTUNE)
+
 
         val mouseX = mc.mouseHandler.xpos() * mc.window.guiScaledWidth / mc.window.screenWidth
         val mouseY = mc.mouseHandler.ypos() * mc.window.guiScaledHeight / mc.window.screenHeight
@@ -46,10 +55,9 @@ class ChiyokoRenderer {
         val luck = (mc.player?.luck ?: 0.0f).toInt()
 
         val isOpenWater = rod?.isOpenWaterFishing ?: true
-        val level = mc.level
         val isJungle =
-            if (rodPos != null && level != null) level.getBiome(rodPos).`is`(BiomeTags.IS_JUNGLE)
-            else if (playerPos != null && level != null) level.getBiome(playerPos).`is`(BiomeTags.IS_JUNGLE)
+            if (rodPos != null) level.getBiome(rodPos).`is`(BiomeTags.IS_JUNGLE)
+            else if (playerPos != null) level.getBiome(playerPos).`is`(BiomeTags.IS_JUNGLE)
             else false
 
 

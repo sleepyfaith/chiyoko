@@ -46,7 +46,7 @@ class ChiyokoConfigScreen : Screen(Component.literal("chiyoko config")) {
                 Chiyoko.seed = s.toLong()
                 Chiyoko.changeWorldSeed()
 
-                this.minecraft.setScreen(null)
+                this.minecraft.gui.setScreen(null)
             }
             .bounds(row1StartX + inputWidth+gap, yPos, btnWidth, btnHeight)
             .build()
@@ -60,14 +60,14 @@ class ChiyokoConfigScreen : Screen(Component.literal("chiyoko config")) {
 
         this.addRenderableWidget(
             Button.builder(Component.literal("edit layout")) {
-                this.minecraft.setScreen(ChiyokoLayoutEditor())
+                this.minecraft.gui.setScreen(ChiyokoLayoutEditor())
             }
             .bounds(row2StartX, row2Y, editBtnWidth, btnHeight)
             .build()
         )
         this.addRenderableWidget(
             Button.builder(Component.literal("edit overlays")) {
-                this.minecraft.setScreen(ChiyokoOverlayEditor())
+                this.minecraft.gui.setScreen(ChiyokoOverlayEditor())
             }
             .bounds(row2StartX + editBtnWidth + gap, row2Y, editBtnWidth, btnHeight)
             .build()
@@ -79,7 +79,7 @@ class ChiyokoConfigScreen : Screen(Component.literal("chiyoko config")) {
 
         this.addRenderableWidget(
             Button.builder(Component.literal("close")) {
-                this.minecraft.setScreen(PauseScreen(true))
+                this.minecraft.gui.setScreen(PauseScreen(true))
             }
                 .bounds(row3StartX, row3Y, editBtnWidth, btnHeight)
                 .build()

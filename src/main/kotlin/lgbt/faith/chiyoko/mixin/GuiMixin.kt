@@ -1,5 +1,6 @@
 package lgbt.faith.chiyoko.mixin
 
+import com.llamalad7.mixinextras.sugar.Local
 import lgbt.faith.chiyoko.gui.ChiyokoRenderer
 import net.minecraft.client.DeltaTracker
 import net.minecraft.client.gui.Gui
@@ -16,9 +17,11 @@ class GuiMixin {
         at = [At("TAIL")]
     )
     private fun dropseed(
-        graphics: GuiGraphicsExtractor,
         deltaTracker: DeltaTracker,
-        ci: CallbackInfo
+        shouldRenderLevel: Boolean,
+        resourcesLoaded: Boolean,
+        ci: CallbackInfo,
+        @Local graphics: GuiGraphicsExtractor
     ) {
         ChiyokoRenderer().render(graphics)
     }
