@@ -71,9 +71,6 @@ class FishingHookMixin {
         val actualDrops = capturedFishingDrops.toList()
         capturedFishingDrops.clear()
 
-
-        val trueLuck = (hook.playerOwner!!.luck + luck).toInt()
-
         val level = hook.level()
         val pos = hook.blockPosition()
         val isOpenWater = hook.isOpenWaterFishing
@@ -84,9 +81,9 @@ class FishingHookMixin {
         val sequences = Chiyoko.sequences.map
 
         val fishing = sequences["minecraft:gameplay/fishing"] as? Fishing ?: return
-        var predictedRoll = fishing.roll(1, trueLuck, isOpenWater, isJungle)
-        fishing.advance(1, trueLuck, isOpenWater, isJungle)
+        var predictedRoll = fishing.roll(1, luck, isOpenWater, isJungle)
 
+        fishing.advance(1, luck, isOpenWater, isJungle)
         val xoroshiro = fishing.getRngCopy()
         configManager.updateSequence(Chiyoko.worldName, Chiyoko.seed, xoroshiro, fishing.key)
 
@@ -96,8 +93,8 @@ class FishingHookMixin {
             var advancements = 0
             while (isDesynced) {
                 advancements++
-                predictedRoll = fishing.roll(1, trueLuck, isOpenWater, isJungle)
-                fishing.advance(1, trueLuck, isOpenWater, isJungle)
+                predictedRoll = fishing.roll(1, luck, isOpenWater, isJungle)
+                fishing.advance(1, luck, isOpenWater, isJungle)
                 val xoroshiro = fishing.getRngCopy()
                 configManager.updateSequence(Chiyoko.worldName, Chiyoko.seed, xoroshiro, fishing.key)
 
