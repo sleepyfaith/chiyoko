@@ -17,11 +17,15 @@ import org.spongepowered.asm.mixin.injection.At
 import org.spongepowered.asm.mixin.injection.Inject
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 
+private const val MAX_CATCH_HISTORY = 10
+
 @Mixin(Minecraft::class)
 class MinecraftMixin {
 
     // tracks each piglins previous gold-holding state to detect the transition
     private val piglinGoldState = mutableMapOf<Int, Boolean>()
+
+    private val recentCatches = ArrayDeque<ItemStack>(MAX_CATCH_HISTORY)
 
     @Inject(method = ["tick"], at = [At("HEAD")])
     private fun onTick(ci: CallbackInfo) {
@@ -234,7 +238,6 @@ class MinecraftMixin {
     }
 
     // fishing
-
     private fun processFishing() {
         val iter = DropEventState.pendingFishing.iterator()
         while (iter.hasNext()) {
@@ -246,30 +249,63 @@ class MinecraftMixin {
             val expired = p.ticksWaited >= PendingFishingReel.MAX_TICKS
             if (!ready && !expired) continue
 
-            if (p.collectedItems.isNotEmpty()) resolveFishing(p)
+            if (p.collectedItems.isNotEmpty()) {
+                for (item in p.collectedItems) {
+                    if (recentCatches.size >= MAX_CATCH_HISTORY) recentCatches.removeFirst()
+                    recentCatches.addLast(item)
+                }
+                resolveFishing(p)
+            }
             iter.remove()
         }
     }
-
     private fun resolveFishing(p: PendingFishingReel) {
         val fishing = Chiyoko.sequences.map["minecraft:gameplay/fishing"] as? Fishing ?: return
+
         var predicted = fishing.roll(1, p.luck, p.isOpenWater, p.isJungle)
         fishing.advance(1, p.luck, p.isOpenWater, p.isJungle)
         Chiyoko.configManager.updateSequence(Chiyoko.worldName, Chiyoko.seed, fishing.getRngCopy(), fishing.key)
 
         val actual = p.collectedItems.first()
         var desynced = actual.item != predicted.first().item
+
+        val mc = Minecraft.getInstance()
+        mc.player!!.sendSystemMessage(
+            Component.literal("${actual} | ${predicted} | $desynced | ${isMatchingSeed()} | ${p.luck}")
+        )
         if (!desynced || !isMatchingSeed()) return
+
+        val catchList = recentCatches.toList() // snapshot the history once
 
         var advances = 0
         while (desynced) {
             advances++
-            predicted = fishing.roll(1, p.luck, p.isOpenWater, p.isJungle)
-            fishing.advance(1, p.luck, p.isOpenWater, p.isJungle)
-            Chiyoko.configManager.updateSequence(Chiyoko.worldName, Chiyoko.seed, fishing.getRngCopy(), fishing.key)
-            desynced = actual.item != predicted.first().item
+
+            if (tryMatchCatchSequence(fishing, catchList, p)) {
+                desynced = false
+            } else {
+                fishing.advance(1, p.luck, p.isOpenWater, p.isJungle)
+                Chiyoko.configManager.updateSequence(Chiyoko.worldName, Chiyoko.seed, fishing.getRngCopy(), fishing.key)
+            }
         }
-        sendOverlay("advanced $advances times to account for desync")
+
+        sendOverlay("advanced $advances times to account for desync (matched ${catchList.size} items)")
+    }
+
+    private fun tryMatchCatchSequence(fishing: Fishing, catchList: List<ItemStack>, p: PendingFishingReel): Boolean {
+        val snapshot = fishing.getRngCopy()
+        for (expected in catchList) {
+            val pred = fishing.roll(1, p.luck, p.isOpenWater, p.isJungle)
+
+            if (expected.item != pred.first().item) {
+                fishing.loadState(snapshot.seedLo, snapshot.seedHi)
+                return false
+            }
+
+            fishing.advance(1, p.luck, p.isOpenWater, p.isJungle)
+        }
+        Chiyoko.configManager.updateSequence(Chiyoko.worldName, Chiyoko.seed, fishing.getRngCopy(), fishing.key)
+        return true
     }
 
     // piglin bartering
