@@ -8,9 +8,7 @@
     "ScreenAccessor",
     "BiomeManagerAccessor",
 
-    "PiglinAiMixin",
     "LivingEntityMixin",
-    "FishingHookMixin",
     "FishingHookAccessor",
     "MultiPlayerGameModeMixin",
     "MinecraftMixin",
