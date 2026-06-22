@@ -143,7 +143,7 @@ class Fishing : Sequence {
             when (stack.item) {
                 Items.BOW -> {
                     stack.damageValue = Mth.floor((1f - ItemFunctions.applyDamage(rng, 0f, 0.25f)) * stack.maxDamage)
-                    val enchants = EnchantFunctions.enchantWithLevels(rng, Enchantability.FISHING_ROD, EligibleEnchantments.FISHING_ROD, 30)
+                    val enchants = EnchantFunctions.enchantWithLevels(rng, Enchantability.BOW, EligibleEnchantments.BOW, 30)
                     enchants.forEach { stack.enchant(it.enchantment, it.level) }
                 }
 
@@ -156,7 +156,7 @@ class Fishing : Sequence {
 
                 Items.FISHING_ROD -> {
                     stack.damageValue = Mth.floor((1f - ItemFunctions.applyDamage(rng, 0f, 0.25f)) * stack.maxDamage)
-                    val enchants = EnchantFunctions.enchantWithLevels(rng, Enchantability.BOW, EligibleEnchantments.BOW, 30)
+                    val enchants = EnchantFunctions.enchantWithLevels(rng, Enchantability.FISHING_ROD, EligibleEnchantments.FISHING_ROD, 30)
                     enchants.forEach { stack.enchant(it.enchantment, it.level) }
                 }
             }

@@ -5,10 +5,40 @@ import net.minecraft.client.Minecraft
 import net.minecraft.core.Holder
 import net.minecraft.core.registries.Registries
 import net.minecraft.resources.Identifier
+import net.minecraft.tags.ItemTags
+import net.minecraft.world.item.Items
 import net.minecraft.world.item.enchantment.Enchantment as MinecraftEnchantment
 import net.minecraft.world.item.enchantment.EnchantmentInstance as MinecraftEnchantmentInstance
 
 object EnchantFunctions {
+
+    fun logRegistryOrderForHeldItem() {
+        val mc = Minecraft.getInstance()
+        val player = mc.player ?: return
+        val registries = player.level().registryAccess()
+
+        val enchantmentLookup = registries.lookupOrThrow(Registries.ENCHANTMENT)
+        val heldItem = player.mainHandItem
+
+        if (heldItem.isEmpty) return
+
+        println("// --- Valid Enchantments for ${heldItem.item} (Exact Registry Order) ---")
+
+        enchantmentLookup.listElements().forEach { holder ->
+            val enchantment = holder.value()
+            val key = holder.key().identifier()
+
+            val supported = enchantment.definition().supportedItems()
+            val validForItem = heldItem.`is`(supported)
+                    || heldItem.`is`(Items.BOOK)
+                    || heldItem.`is`(Items.ENCHANTED_BOOK)
+
+            if (validForItem) {
+                println("$key (max level: ${enchantment.getMaxLevel()})")
+            }
+        }
+    }
+
 
     fun enchantmentIdentifierToHolder(id: String): Holder<MinecraftEnchantment>? {
         val mc = Minecraft.getInstance()

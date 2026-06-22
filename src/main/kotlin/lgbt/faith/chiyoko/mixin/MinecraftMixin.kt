@@ -1,11 +1,14 @@
 package lgbt.faith.chiyoko.mixin
 
 import lgbt.faith.chiyoko.*
+import lgbt.faith.chiyoko.functions.EnchantFunctions
+import lgbt.faith.chiyoko.functions.Enchantment
 import lgbt.faith.chiyoko.rand.Xoroshiro128PlusPlus
 import lgbt.faith.chiyoko.sequences.*
 import net.minecraft.client.Minecraft
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.network.chat.Component
+import net.minecraft.world.entity.HumanoidArm
 import net.minecraft.world.entity.monster.piglin.Piglin
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
@@ -31,6 +34,11 @@ class MinecraftMixin {
     private fun onTick(ci: CallbackInfo) {
         val mc = Minecraft.getInstance()
         val level = mc.level ?: return
+
+        val player = mc.player
+        if (player != null) {
+            EnchantFunctions.logRegistryOrderForHeldItem()
+        }
 
         processVaults(mc, level)
         detectPiglinGoldPickup(level)
