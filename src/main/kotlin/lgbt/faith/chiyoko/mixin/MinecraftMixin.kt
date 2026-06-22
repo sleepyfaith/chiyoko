@@ -36,10 +36,10 @@ class MinecraftMixin {
         val mc = Minecraft.getInstance()
         val level = mc.level ?: return
 
-        val player = mc.player
-        if (player != null) {
-            EnchantFunctions.logRegistryOrderForHeldItem()
-        }
+//        val player = mc.player
+//        if (player != null) {
+//            EnchantFunctions.logRegistryOrderForHeldItem()
+//        }
 
         processVaults(mc, level)
         detectPiglinGoldPickup(level)
