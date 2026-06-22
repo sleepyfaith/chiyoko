@@ -275,10 +275,6 @@ class MinecraftMixin {
         }
     }
     private fun resolveFishing(p: PendingFishingReel) {
-        Minecraft.getInstance().player!!.sendSystemMessage(
-            Component.literal("${p.luck}")
-        )
-
         val fishing = Chiyoko.sequences.map["minecraft:gameplay/fishing"] as? Fishing ?: return
 
         val actual = p.collectedItems.first()
