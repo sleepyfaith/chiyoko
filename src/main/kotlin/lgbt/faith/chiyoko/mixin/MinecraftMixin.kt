@@ -30,6 +30,26 @@ class MinecraftMixin {
 
     private val recentCatches = ArrayDeque<ItemStack>(MAX_CATCH_HISTORY)
 
+    private inline fun <T> nearestEligible(
+        list: List<T>,
+        radius: Double,
+        itemPos: net.minecraft.world.phys.Vec3,
+        isEligible: (T) -> Boolean,
+        posOf: (T) -> net.minecraft.world.phys.Vec3,
+    ): T? {
+        var best: T? = null
+        var bestDist = radius
+        for (candidate in list) {
+            if (!isEligible(candidate)) continue
+            val d = posOf(candidate).distanceTo(itemPos)
+            if (d <= bestDist) {
+                best = candidate
+                bestDist = d
+            }
+        }
+        return best
+    }
+
     @Inject(method = ["tick"], at = [At("HEAD")])
     private fun onTick(ci: CallbackInfo) {
         val mc = Minecraft.getInstance()
@@ -41,19 +61,27 @@ class MinecraftMixin {
 //        }
 
         processVaults(mc, level)
-        detectPiglinGoldPickup(level)
+        scanEntities(level)
         routeNewItemEntities(level)
         processGravels()
         processWithers()
         processFishing()
         processBarters()
-        DropEventState.selfBrokenBlocks.entries.removeIf { (_, age) -> age > 2 }
-        DropEventState.selfBrokenBlocks.replaceAll { _, age -> age + 1 }
+        ageSelfBrokenBlocks()
     }
 
     // vaults
+    private fun ageSelfBrokenBlocks() {
+        val iter = DropEventState.selfBrokenBlocks.entries.iterator()
+        while (iter.hasNext()) {
+            val entry = iter.next()
+            val newAge = entry.value + 1
+            if (newAge > 2) iter.remove() else entry.setValue(newAge)
+        }
+    }
 
     private fun processVaults(mc: Minecraft, level: ClientLevel) {
+        if (VaultInteractionState.pendingVaults.isEmpty()) return
         val snapshot = VaultInteractionState.pendingVaults.toList()
         VaultInteractionState.pendingVaults.clear()
 
@@ -84,31 +112,45 @@ class MinecraftMixin {
 
     // piglin - detect when picks up gold ingot
 
-    private fun detectPiglinGoldPickup(level: ClientLevel) {
+    // piglin gold pickup + new item entity discovery, single pass
+
+    private fun scanEntities(level: ClientLevel) {
         val livePiglinIds = mutableSetOf<Int>()
+        val trackItems = DropEventState.pendingGravels.isNotEmpty() ||
+                DropEventState.pendingFishing.isNotEmpty() ||
+                DropEventState.pendingWithers.isNotEmpty() ||
+                DropEventState.pendingBarters.isNotEmpty()
+
         for (entity in level.entitiesForRendering()) {
-            if (entity !is Piglin) continue
-            livePiglinIds.add(entity.id)
-            val holdingGold = entity.mainHandItem.`is`(Items.GOLD_INGOT)
-            val wasHolding = piglinGoldState[entity.id] ?: false
-            if (!wasHolding && holdingGold) {
-                DropEventState.pendingBarters.add(PendingPiglinBarter(entity.position()))
+            when {
+                entity is Piglin -> {
+                    livePiglinIds.add(entity.id)
+                    val holdingGold = entity.mainHandItem.`is`(Items.GOLD_INGOT)
+                    val wasHolding = piglinGoldState[entity.id] ?: false
+                    if (!wasHolding && holdingGold) {
+                        DropEventState.pendingBarters.add(PendingPiglinBarter(entity.position()))
+                    }
+                    piglinGoldState[entity.id] = holdingGold
+                }
+                trackItems && entity is net.minecraft.world.entity.item.ItemEntity && !entity.item.isEmpty -> {
+                    if (DropEventState.knownItemEntityIds.add(entity.id)) {
+                        DropEventState.newItemEntities.add(entity.position() to entity.item.copy())
+                    }
+                }
             }
-            piglinGoldState[entity.id] = holdingGold
         }
         piglinGoldState.keys.retainAll(livePiglinIds)
+
+        if (!trackItems) {
+            DropEventState.knownItemEntityIds.clear()
+            DropEventState.newItemEntities.clear()
+        }
     }
 
     // route newly arrived item entities to the nearest pending event
 
     private fun routeNewItemEntities(level: ClientLevel) {
-        for (entity in level.entitiesForRendering()) {
-            if (entity !is net.minecraft.world.entity.item.ItemEntity || entity.item.isEmpty) continue
-
-            if (DropEventState.knownItemEntityIds.add(entity.id)) {
-                DropEventState.newItemEntities.add(entity.position() to entity.item.copy())
-            }
-        }
+        if (DropEventState.newItemEntities.isEmpty()) return
 
         DropEventState.knownItemEntityIds.retainAll { level.getEntity(it) != null }
 
@@ -117,10 +159,11 @@ class MinecraftMixin {
 
         for ((itemPos, itemStack) in newItems) {
             // gravel and fishing each drop exactly 1 item, so fill those first.
-            val gravel = DropEventState.pendingGravels
-                .filter { it.collectedItems.isEmpty() }
-                .minByOrNull { it.pos.distanceTo(itemPos) }
-                ?.takeIf { it.pos.distanceTo(itemPos) <= PendingGravelBreak.RADIUS }
+            val gravel = nearestEligible(
+                DropEventState.pendingGravels, PendingGravelBreak.RADIUS, itemPos,
+                isEligible = { it.collectedItems.isEmpty() },
+                posOf = { it.pos },
+            )
 
             if (gravel != null) {
                 gravel.collectedItems.add(itemStack)
@@ -128,10 +171,11 @@ class MinecraftMixin {
                 continue
             }
 
-            val fishing = DropEventState.pendingFishing
-                .filter { it.collectedItems.isEmpty() }
-                .minByOrNull { it.pos.distanceTo(itemPos) }
-                ?.takeIf { it.pos.distanceTo(itemPos) <= PendingFishingReel.RADIUS }
+            val fishing = nearestEligible(
+                DropEventState.pendingFishing, PendingFishingReel.RADIUS, itemPos,
+                isEligible = { it.collectedItems.isEmpty() },
+                posOf = { it.pos },
+            )
 
             if (fishing != null) {
                 fishing.collectedItems.add(itemStack)
@@ -139,9 +183,11 @@ class MinecraftMixin {
                 continue
             }
 
-            val wither = DropEventState.pendingWithers
-                .minByOrNull { it.pos.distanceTo(itemPos) }
-                ?.takeIf { it.pos.distanceTo(itemPos) <= PendingWitherDeath.RADIUS }
+            val wither = nearestEligible(
+                DropEventState.pendingWithers, PendingWitherDeath.RADIUS, itemPos,
+                isEligible = { true },
+                posOf = { it.pos },
+            )
 
             if (wither != null) {
                 wither.collectedItems.add(itemStack)
@@ -149,9 +195,11 @@ class MinecraftMixin {
                 continue
             }
 
-            val barter = DropEventState.pendingBarters
-                .minByOrNull { it.pos.distanceTo(itemPos) }
-                ?.takeIf { it.pos.distanceTo(itemPos) <= PendingPiglinBarter.RADIUS }
+            val barter = nearestEligible(
+                DropEventState.pendingBarters, PendingPiglinBarter.RADIUS, itemPos,
+                isEligible = { true },
+                posOf = { it.pos },
+            )
 
             if (barter != null) {
                 barter.collectedItems.add(itemStack)
@@ -298,35 +346,41 @@ class MinecraftMixin {
         val catchList = recentCatches.toList() // snapshot the history once
 
         var advances = 0L
+        var rngAdvances = 0L
         val maxAdvances = 1000
         while (desynced && advances < maxAdvances) {
             advances++
 
-            if (tryMatchCatchSequence(fishing, catchList, p)) {
+            val matched = tryMatchCatchSequence(fishing, catchList, p)
+            if (matched != null) {
+                rngAdvances += matched
                 desynced = false
             } else {
                 fishing.advance(1, p.luck, p.isOpenWater, p.isJungle)
-                Chiyoko.configManager.updateSequence(Chiyoko.worldName, Chiyoko.seed, fishing.getRngCopy(), fishing.key)
+                rngAdvances++
             }
+        }
+
+        if (rngAdvances > 0) {
+            Chiyoko.configManager.updateSequence(Chiyoko.worldName, Chiyoko.seed, fishing.getRngCopy(), fishing.key, rngAdvances)
         }
 
         sendOverlay("advanced $advances times to account for desync (matched ${catchList.size} items)")
     }
 
-    private fun tryMatchCatchSequence(fishing: Fishing, catchList: List<ItemStack>, p: PendingFishingReel): Boolean {
+    private fun tryMatchCatchSequence(fishing: Fishing, catchList: List<ItemStack>, p: PendingFishingReel): Int? {
         val snapshot = fishing.getRngCopy()
         for (expected in catchList) {
             val pred = fishing.roll(1, p.luck, p.isOpenWater, p.isJungle)
 
             if (expected.item != pred.first().item) {
                 fishing.loadState(snapshot.seedLo, snapshot.seedHi)
-                return false
+                return null
             }
 
             fishing.advance(1, p.luck, p.isOpenWater, p.isJungle)
         }
-        Chiyoko.configManager.updateSequence(Chiyoko.worldName, Chiyoko.seed, fishing.getRngCopy(), fishing.key)
-        return true
+        return catchList.size
     }
 
     // piglin bartering
